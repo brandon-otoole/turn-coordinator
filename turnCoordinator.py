@@ -1,5 +1,14 @@
 #! /usr/bin/env python3
 
+from configparser import ConfigParser
+
+#Read config.ini file
+configData = ConfigParser()
+configData.read("config.ini")
+socketConfig = configData["READ_SOCKET"]
+UDP_ADDRESS = socketConfig["address"]
+UDP_PORT = int(socketConfig["port"])
+
 import tkinter
 import threading
 import time
@@ -63,7 +72,7 @@ def main(height, width, dtState, dtGraphics):
     bgLoop = stateLoop(tc, dtState, dataPipe)
     bgLoop.start()
 
-    socketListener = SocketListener("127.0.0.1", 49000)
+    socketListener = SocketListener(UDP_ADDRESS, UDP_PORT)
     socketListener.subscribe(16, lambda x: dataPipe.put(x))
     socketListener.start()
 

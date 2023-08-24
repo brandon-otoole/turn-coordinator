@@ -5,7 +5,9 @@ import threading
 import time
 
 from base64 import b16encode
+from queue import Queue
 
+from SocketListener import SocketListener
 from CoordinatorGraphic import Coordinator
 from My2D import rotatePoly, movePoly, degToRad
 
@@ -16,21 +18,26 @@ def rgb(r, g, b):
 
 # a dummy thread to make state changes in the background
 class stateLoop(threading.Thread):
-    def __init__(self, tc, dt):
+    def __init__(self, tc, dt, dataPipe):
         threading.Thread.__init__(self)
         self.tc = tc
         self.dt = dt
+        self.dataPipe = dataPipe
 
     def run(self):
         try:
-            nextUpdate = time.time() + self.dt
+            #nextUpdate = time.time() + self.dt
             while True:
-                while time.time() < nextUpdate:
+                while self.dataPipe.empty():
+                #while time.time() < nextUpdate:
                     #time.sleep(dtGraphics/100)
                     pass
 
-                nextUpdate = time.time() + self.dt
-                self.tc.roll(degToRad(10)*self.dt)
+                #nextUpdate = time.time() + self.dt
+
+                p, q, r, na, na, na, na, na = self.dataPipe.get()
+
+                self.tc.theta = degToRad(r*5)
 
         except KeyboardInterrupt:
             sys.exit()
@@ -51,8 +58,14 @@ def main(height, width, dtState, dtGraphics):
     tc = Coordinator(400, 400, 0)
 
     # create and begin the state update loop
-    bgLoop = stateLoop(tc, dtState)
+    dataPipe = Queue()
+
+    bgLoop = stateLoop(tc, dtState, dataPipe)
     bgLoop.start()
+
+    socketListener = SocketListener("127.0.0.1", 49000)
+    socketListener.subscribe(16, lambda x: dataPipe.put(x))
+    socketListener.start()
 
     # draw the outer ring
     canvas.create_oval(0, 0, 800, 800, fill=darkGray)
@@ -146,6 +159,3 @@ if __name__ == "__main__":
         main(height, width, dtState, dtGraphics)
     except KeyboardInterrupt:
         sys.exit()
-    except Exception:
-        sys.exit()
-
